@@ -1,10 +1,9 @@
-using IronXL;
 using System;
 using System.Data;
 using System.Net;
 using System.Net.Mail;
 using System.Xml.Linq;
-//using Excel = Microsoft.Office.Interop.Excel;
+using Excel = Microsoft.Office.Interop.Excel;
 
 namespace EmailPdfUtilityApp
 {
@@ -66,7 +65,7 @@ namespace EmailPdfUtilityApp
                     try
                     {
                         DataTable dtExcel = this.ReadExcelFile(sFileName);
-                        System.Data.DataView view = new System.Data.DataView(dtExcel);
+                        DataView view = new DataView(dtExcel);
                         DataTable table2 = view.ToTable(false, "month", "NAME", "ECN", "EMAILID");
                         if (table2 != null && table2.Rows.Count > 0)
                         {
@@ -147,20 +146,65 @@ namespace EmailPdfUtilityApp
             }
         }
 
-        private DataTable ReadExcelFile(string fileName)
+        public DataTable ReadExcelFile(string path)
         {
-            WorkBook workbook = WorkBook.Load(fileName);
-            
-            // Work with a single WorkSheet.
-            //you can pass static sheet name like Sheet1 to get that sheet
-            //WorkSheet sheet = workbook.GetWorkSheet("Sheet1");
-            //You can also use workbook.DefaultWorkSheet to get default in case you want to get first sheet only
-            WorkSheet sheet = workbook.DefaultWorkSheet;            
-            
-            //Convert the worksheet to System.Data.DataTable
-            //Boolean parameter sets the first row as column names of your table.
-            return sheet.ToDataTable(true);
+            DataTable dt = new DataTable();            
+            Excel.Application objXL = new Excel.Application();
+            Excel.Workbook objWB = objXL.Workbooks.Open(path);            
+            Excel.Worksheet objSHT = objWB.Worksheets[1];
+
+            int rows = objSHT.UsedRange.Rows.Count;
+            int cols = objSHT.UsedRange.Columns.Count;            
+            int noofrow = 1;
+
+            for (int c = noofrow; c <= cols; c++)
+            {                
+                string colname = objSHT.Cells[1, c].Text;
+                dt.Columns.Add(colname);
+                noofrow = 2;
+            }
+
+            for (int r = noofrow; r <= rows; r++)
+            {
+                DataRow dr = dt.NewRow();
+                for (int c = 1; c <= cols; c++)
+                {
+                    dr[c - 1] = objSHT.Cells[r, c].Text;
+                }
+                dt.Rows.Add(dr);
+            }
+
+            objWB.Close();
+            objXL.Quit();
+            return dt;
         }
+
+        //public DataTable ReadExcelFile(string FilePath)
+        //{
+        //    ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        //    FileInfo fileInfo = new FileInfo(FilePath);
+        //    using (ExcelPackage package = new ExcelPackage(fileInfo))
+        //    {
+        //        DataTable dt = new DataTable();
+        //        dt = package.ToDataTable();
+        //        return dt;
+        //    }
+        //}        
+
+        //private DataTable ReadExcelFile(string fileName)
+        //{
+        //    WorkBook workbook = WorkBook.Load(fileName);
+
+        //    // Work with a single WorkSheet.
+        //    //you can pass static sheet name like Sheet1 to get that sheet
+        //    //WorkSheet sheet = workbook.GetWorkSheet("Sheet1");
+        //    //You can also use workbook.DefaultWorkSheet to get default in case you want to get first sheet only
+        //    WorkSheet sheet = workbook.DefaultWorkSheet;            
+
+        //    //Convert the worksheet to System.Data.DataTable
+        //    //Boolean parameter sets the first row as column names of your table.
+        //    return sheet.ToDataTable(true);
+        //}
 
         private bool SendMail(EmailConfigModel emailConfig, string toEmailId, string fileName)
         {            
@@ -249,4 +293,30 @@ namespace EmailPdfUtilityApp
         public string Subject { get; set; }
         public string EmailBody { get; set; }
     }
+
+    //public static class ExcelPackageExtensions
+    //{
+    //    public static DataTable ToDataTable(this ExcelPackage package)
+    //    {
+    //        ExcelWorksheet workSheet = package.Workbook.Worksheets.First();
+    //        DataTable table = new DataTable();
+    //        foreach (var firstRowCell in workSheet.Cells[1, 1, 1, workSheet.Dimension.End.Column])
+    //        {
+    //            table.Columns.Add(firstRowCell.Text);
+    //        }
+
+    //        for (var rowNumber = 2; rowNumber <= workSheet.Dimension.End.Row; rowNumber++)
+    //        {
+    //            var row = workSheet.Cells[rowNumber, 1, rowNumber, workSheet.Dimension.End.Column];
+    //            var newRow = table.NewRow();
+    //            foreach (var cell in row)
+    //            {
+    //                newRow[cell.Start.Column - 1] = cell.Text;
+    //            }
+    //            table.Rows.Add(newRow);
+    //        }
+    //        return table;
+    //    }
+
+    //}
 }
